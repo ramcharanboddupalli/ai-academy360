@@ -14,7 +14,6 @@ export function authErrorMessage(error: unknown, context: AuthErrorContext): str
     const message = error.response?.data?.message;
     return typeof message === 'string' ? message : 'Check the information you entered.';
   }
-  if (status === 403 && context === 'signup') return 'Invalid management signup code.';
   if (status === 409) return 'An account with this email already exists.';
   if (status === 503 || (typeof status === 'number' && status >= 500)) {
     return 'The authentication service is temporarily unavailable. Please try again shortly.';

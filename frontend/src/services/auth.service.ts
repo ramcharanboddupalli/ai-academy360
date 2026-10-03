@@ -32,7 +32,6 @@ export type ManagementSignupPayload = {
   email: string;
   password: string;
   confirmPassword: string;
-  signupCode: string;
 };
 
 export const authService = {
@@ -43,7 +42,12 @@ export const authService = {
     return api.post<AuthResponse>('/auth/student/login', { studentId: payload.studentId, password: payload.password });
   },
   async signupManagement(payload: ManagementSignupPayload) {
-    return api.post<{ success: true; message: string; user: AuthUser }>('/auth/management/signup', payload);
+    return api.post<{ success: true; message: string; user: AuthUser }>('/auth/management/signup', {
+      fullName: payload.fullName,
+      email: payload.email,
+      password: payload.password,
+      confirmPassword: payload.confirmPassword,
+    });
   },
   async getCurrentUser() {
     return api.get<{ success: true; user: AuthUser }>('/auth/me');

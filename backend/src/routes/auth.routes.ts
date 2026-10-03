@@ -1,5 +1,4 @@
 import bcrypt from 'bcrypt';
-import { timingSafeEqual } from 'node:crypto';
 import { Router, type Request, type Response } from 'express';
 import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import { z } from 'zod';
@@ -16,7 +15,6 @@ const managementSignupSchema = z.object({
   email: z.string().trim().email('Enter a valid email address.').max(254, 'Email must be 254 characters or fewer.').transform((email) => email.toLowerCase()),
   password: z.string().min(12, 'Password must be at least 12 characters.'),
   confirmPassword: z.string().min(1, 'Confirm your password.'),
-  signupCode: z.string().min(1, 'Management signup code is required.'),
 }).superRefine(({ password, confirmPassword }, context) => {
   if (password !== confirmPassword) {
     context.addIssue({ code: 'custom', path: ['confirmPassword'], message: 'Passwords do not match.' });
@@ -40,14 +38,6 @@ function isDuplicateEntry(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === 'ER_DUP_ENTRY';
 }
 
-function isManagementSignupCodeValid(suppliedCode: string): boolean {
-  const configuredCode = process.env.MANAGEMENT_SIGNUP_CODE;
-  if (!configuredCode) return false;
-  const supplied = Buffer.from(suppliedCode, 'utf8');
-  const expected = Buffer.from(configuredCode, 'utf8');
-  return supplied.length === expected.length && timingSafeEqual(supplied, expected);
-}
-
 function handleUnavailable(res: Response, error: unknown) {
   if (error instanceof DatabaseConfigurationError) {
     return res.status(503).json({ success: false, message: 'Database is not configured.' });
@@ -61,15 +51,9 @@ router.post('/management/signup', async (req: Request, res: Response) => {
     return res.status(400).json({ success: false, message: parsed.error.issues[0]?.message ?? 'Signup details are invalid.' });
   }
 
-  const { fullName, email, password, signupCode } = parsed.data;
+  const { fullName, email, password } = parsed.data;
   if (Buffer.byteLength(password, 'utf8') < 12) {
     return res.status(400).json({ success: false, message: 'Password must be at least 12 UTF-8 bytes.' });
-  }
-  if (!process.env.MANAGEMENT_SIGNUP_CODE) {
-    return res.status(503).json({ success: false, message: 'Management signup is not configured.' });
-  }
-  if (!isManagementSignupCodeValid(signupCode)) {
-    return res.status(403).json({ success: false, message: 'Invalid management signup code.' });
   }
 
   let connection: PoolConnection | undefined;

@@ -37,7 +37,6 @@ export function ManagementSignupPage() {
         email: String(formData.get('email') ?? ''),
         password,
         confirmPassword,
-        signupCode: String(formData.get('signupCode') ?? ''),
       });
       navigate('/management/login', {
         replace: true,
@@ -58,7 +57,7 @@ export function ManagementSignupPage() {
     >
       <div className="space-y-2">
         <h2 className="text-2xl font-bold text-[var(--color-text)]">Create management account</h2>
-        <p className="text-sm text-[var(--color-muted)]">An authorized signup code is required to register.</p>
+        <p className="text-sm text-[var(--color-muted)]">Create your management account with your name, email, and password.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -80,12 +79,10 @@ export function ManagementSignupPage() {
           maxLength={72}
           required
         />
-        <Input label="Management Signup Code" name="signupCode" type="password" autoComplete="off" required />
-
         {errorMessage ? <p role="alert" className="rounded-xl border border-[var(--color-primary)]/30 bg-[var(--color-background)] p-3 text-sm text-[var(--color-text)]">{errorMessage}</p> : null}
 
         <Button type="submit" variant="primary" size="lg" className="w-full" loading={isSubmitting}>
-          Create Account <ArrowRight className="h-4 w-4" />
+          Create Management Account <ArrowRight className="h-4 w-4" />
         </Button>
 
         <p className="text-center text-sm text-[var(--color-muted)]">
