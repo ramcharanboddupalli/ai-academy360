@@ -67,12 +67,12 @@ async function run() {
   let db: mysql.Connection | undefined;
   let stage = 'admin_authentication';
   try {
-    const adminLogin = await request('/auth/admin/login', {
+    const managementLogin = await request('/auth/management/login', {
       method: 'POST',
-      body: { email: process.env.SEED_ADMIN_EMAIL, password: process.env.SEED_ADMIN_PASSWORD },
+      body: { email: process.env.VERIFY_ADMIN_EMAIL, password: process.env.VERIFY_ADMIN_PASSWORD },
     });
-    adminToken = adminLogin.data.token;
-    record('Management authentication', adminLogin.status === 200 && adminLogin.data.user?.role === 'ADMIN', { status: adminLogin.status });
+    adminToken = managementLogin.data.token;
+    record('Management authentication', managementLogin.status === 200 && managementLogin.data.user?.role === 'ADMIN', { status: managementLogin.status });
     if (!adminToken) throw new TestStopError('admin_login_failed');
 
     const coursesResponse = await request('/admin/courses', { token: adminToken });

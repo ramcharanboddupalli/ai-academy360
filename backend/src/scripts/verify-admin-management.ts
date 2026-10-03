@@ -68,7 +68,7 @@ async function run() {
     const health = await request('/health');
     const dbHealth = await request('/health/db');
     record('API and MySQL available', health.status === 200 && dbHealth.status === 200 && dbHealth.data.database === 'connected');
-    const login = await request('/auth/admin/login', { method: 'POST', body: { email: process.env.SEED_ADMIN_EMAIL, password: process.env.SEED_ADMIN_PASSWORD } });
+    const login = await request('/auth/management/login', { method: 'POST', body: { email: process.env.VERIFY_ADMIN_EMAIL, password: process.env.VERIFY_ADMIN_PASSWORD } });
     adminToken = login.data.token;
     record('Admin session authenticated', login.status === 200 && Boolean(adminToken));
     if (!adminToken) throw new Error('admin_authentication_failed');

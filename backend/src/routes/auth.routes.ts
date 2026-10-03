@@ -1,6 +1,8 @@
 import bcrypt from 'bcrypt';
+import { timingSafeEqual } from 'node:crypto';
 import { Router, type Request, type Response } from 'express';
-import type { RowDataPacket } from 'mysql2';
+import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
+import { z } from 'zod';
 import { DatabaseConfigurationError, getDatabasePool } from '../config/database.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { createAccessToken } from '../services/auth.service.js';
@@ -9,8 +11,41 @@ const router = Router();
 const invalidCredentials = { success: false, message: 'Invalid email or password.' };
 const invalidStudentCredentials = { success: false, message: 'Invalid Student ID or password.' };
 
-function isText(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0;
+const managementSignupSchema = z.object({
+  fullName: z.string().trim().min(1, 'Full name is required.').max(200, 'Full name must be 200 characters or fewer.'),
+  email: z.string().trim().email('Enter a valid email address.').max(254, 'Email must be 254 characters or fewer.').transform((email) => email.toLowerCase()),
+  password: z.string().min(12, 'Password must be at least 12 characters.'),
+  confirmPassword: z.string().min(1, 'Confirm your password.'),
+  signupCode: z.string().min(1, 'Management signup code is required.'),
+}).superRefine(({ password, confirmPassword }, context) => {
+  if (password !== confirmPassword) {
+    context.addIssue({ code: 'custom', path: ['confirmPassword'], message: 'Passwords do not match.' });
+  }
+  if (Buffer.byteLength(password, 'utf8') > 72) {
+    context.addIssue({ code: 'custom', path: ['password'], message: 'Password must be no more than 72 UTF-8 bytes.' });
+  }
+});
+
+const managementLoginSchema = z.object({
+  email: z.string().trim().email().transform((email) => email.toLowerCase()),
+  password: z.string().min(1),
+});
+
+const studentLoginSchema = z.object({
+  studentId: z.string().trim().min(1),
+  password: z.string().min(1),
+});
+
+function isDuplicateEntry(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === 'ER_DUP_ENTRY';
+}
+
+function isManagementSignupCodeValid(suppliedCode: string): boolean {
+  const configuredCode = process.env.MANAGEMENT_SIGNUP_CODE;
+  if (!configuredCode) return false;
+  const supplied = Buffer.from(suppliedCode, 'utf8');
+  const expected = Buffer.from(configuredCode, 'utf8');
+  return supplied.length === expected.length && timingSafeEqual(supplied, expected);
 }
 
 function handleUnavailable(res: Response, error: unknown) {
@@ -20,18 +55,85 @@ function handleUnavailable(res: Response, error: unknown) {
   return res.status(503).json({ success: false, message: 'Authentication service is unavailable.' });
 }
 
-router.post('/admin/login', async (req: Request, res: Response) => {
-  const { email, password } = req.body ?? {};
-  if (!isText(email) || !isText(password)) {
+router.post('/management/signup', async (req: Request, res: Response) => {
+  const parsed = managementSignupSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ success: false, message: parsed.error.issues[0]?.message ?? 'Signup details are invalid.' });
+  }
+
+  const { fullName, email, password, signupCode } = parsed.data;
+  if (Buffer.byteLength(password, 'utf8') < 12) {
+    return res.status(400).json({ success: false, message: 'Password must be at least 12 UTF-8 bytes.' });
+  }
+  if (!process.env.MANAGEMENT_SIGNUP_CODE) {
+    return res.status(503).json({ success: false, message: 'Management signup is not configured.' });
+  }
+  if (!isManagementSignupCodeValid(signupCode)) {
+    return res.status(403).json({ success: false, message: 'Invalid management signup code.' });
+  }
+
+  let connection: PoolConnection | undefined;
+  let transactionStarted = false;
+  try {
+    const pool = getDatabasePool();
+    connection = await pool.getConnection();
+    const [existingUsers] = await connection.execute<RowDataPacket[]>(
+      'SELECT id FROM users WHERE email = ? LIMIT 1',
+      [email],
+    );
+    if (existingUsers.length > 0) {
+      return res.status(409).json({ success: false, message: 'An account with this email already exists.' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    await connection.beginTransaction();
+    transactionStarted = true;
+
+    const [userResult] = await connection.execute<ResultSetHeader>(
+      'INSERT INTO users (email, password_hash, role, is_active) VALUES (?, ?, \'ADMIN\', TRUE)',
+      [email, passwordHash],
+    );
+    await connection.execute(
+      'INSERT INTO admins (user_id, full_name, email) VALUES (?, ?, ?)',
+      [userResult.insertId, fullName, email],
+    );
+    await connection.commit();
+    transactionStarted = false;
+    return res.status(201).json({
+      success: true,
+      message: 'Management account created. Sign in to continue.',
+      user: { id: Number(userResult.insertId), role: 'ADMIN', name: fullName },
+    });
+  } catch (error) {
+    if (transactionStarted && connection) {
+      try {
+        await connection.rollback();
+      } catch {
+        return res.status(503).json({ success: false, message: 'Management signup could not be completed safely.' });
+      }
+    }
+    if (isDuplicateEntry(error)) {
+      return res.status(409).json({ success: false, message: 'An account with this email already exists.' });
+    }
+    return handleUnavailable(res, error);
+  } finally {
+    connection?.release();
+  }
+});
+
+async function managementLogin(req: Request, res: Response) {
+  const parsed = managementLoginSchema.safeParse(req.body);
+  if (!parsed.success) {
     return res.status(400).json({ success: false, message: 'Email and password are required.' });
   }
 
+  const { email, password } = parsed.data;
   try {
     const [rows] = await getDatabasePool().execute<RowDataPacket[]>(
       `SELECT u.id, u.password_hash AS passwordHash, u.role, u.is_active AS isActive, a.full_name AS name
        FROM users u INNER JOIN admins a ON a.user_id = u.id
        WHERE u.email = ? LIMIT 1`,
-      [email.trim().toLowerCase()],
+      [email],
     );
     const admin = rows[0];
     if (!admin || admin.role !== 'ADMIN' || !admin.isActive || !(await bcrypt.compare(password, admin.passwordHash))) {
@@ -43,14 +145,17 @@ router.post('/admin/login', async (req: Request, res: Response) => {
   } catch (error) {
     return handleUnavailable(res, error);
   }
-});
+}
+
+router.post('/management/login', managementLogin);
 
 router.post('/student/login', async (req: Request, res: Response) => {
-  const { studentId, password } = req.body ?? {};
-  if (!isText(studentId) || !isText(password)) {
+  const parsed = studentLoginSchema.safeParse(req.body);
+  if (!parsed.success) {
     return res.status(400).json({ success: false, message: 'Student ID and password are required.' });
   }
 
+  const { studentId, password } = parsed.data;
   try {
     const [rows] = await getDatabasePool().execute<RowDataPacket[]>(
       `SELECT u.id, u.password_hash AS passwordHash, u.role, u.is_active AS isActive,

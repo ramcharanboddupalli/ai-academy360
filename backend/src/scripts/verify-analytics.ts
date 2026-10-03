@@ -53,10 +53,10 @@ async function run() {
     const dbHealth = await request('/health/db');
     record('API and MySQL health', health.status === 200 && dbHealth.status === 200 && dbHealth.data.database === 'connected', { apiStatus: health.status, databaseStatus: dbHealth.status });
 
-    const adminLogin = await request('/auth/admin/login', { method: 'POST', body: { email: process.env.SEED_ADMIN_EMAIL, password: process.env.SEED_ADMIN_PASSWORD } });
-    adminToken = adminLogin.data.token;
-    const adminUserId = Number(adminLogin.data.user?.id);
-    record('Management authentication', adminLogin.status === 200 && Boolean(adminToken) && adminLogin.data.user?.role === 'ADMIN', { status: adminLogin.status, role: adminLogin.data.user?.role ?? null });
+    const managementLogin = await request('/auth/management/login', { method: 'POST', body: { email: process.env.VERIFY_ADMIN_EMAIL, password: process.env.VERIFY_ADMIN_PASSWORD } });
+    adminToken = managementLogin.data.token;
+    const adminUserId = Number(managementLogin.data.user?.id);
+    record('Management authentication', managementLogin.status === 200 && Boolean(adminToken) && managementLogin.data.user?.role === 'ADMIN', { status: managementLogin.status, role: managementLogin.data.user?.role ?? null });
     if (!adminToken) throw new TestStopError('admin_login_failed');
 
     const noAuth = await request('/admin/analytics/overview');

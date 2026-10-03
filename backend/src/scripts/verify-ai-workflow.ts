@@ -62,8 +62,8 @@ async function run() {
   const legacyGroqKey = process.env.AI_API_KEY?.trim();
   const apiKey = groqKey || (legacyGroqKey?.startsWith('gsk_') ? legacyGroqKey : '');
   const model = process.env.AI_MODEL?.trim();
-  if (!apiKey || !model || !process.env.SEED_ADMIN_EMAIL || !process.env.SEED_ADMIN_PASSWORD) {
-    record('Required local Groq/auth configuration', false, { groqKeyPresent: Boolean(apiKey), modelConfigured: Boolean(model), adminSeedConfigured: Boolean(process.env.SEED_ADMIN_EMAIL && process.env.SEED_ADMIN_PASSWORD) });
+  if (!apiKey || !model || !process.env.VERIFY_ADMIN_EMAIL || !process.env.VERIFY_ADMIN_PASSWORD) {
+    record('Required local Groq/auth configuration', false, { groqKeyPresent: Boolean(apiKey), modelConfigured: Boolean(model), managementCredentialsConfigured: Boolean(process.env.VERIFY_ADMIN_EMAIL && process.env.VERIFY_ADMIN_PASSWORD) });
   }
 
   let db: mysql.Connection | undefined;
@@ -80,15 +80,15 @@ async function run() {
     const databaseHealth = await request('/health/db');
     record('GET /api/health/db', databaseHealth.status === 200 && databaseHealth.data.database === 'connected', { status: databaseHealth.status });
 
-    const adminLogin = await request('/auth/admin/login', {
+    const managementLogin = await request('/auth/management/login', {
       method: 'POST',
-      body: { email: process.env.SEED_ADMIN_EMAIL, password: process.env.SEED_ADMIN_PASSWORD },
+      body: { email: process.env.VERIFY_ADMIN_EMAIL, password: process.env.VERIFY_ADMIN_PASSWORD },
     });
-    adminToken = adminLogin.data.token;
-    const adminUserId = Number(adminLogin.data.user?.id);
-    record('Management login returns ADMIN session', adminLogin.status === 200 && Boolean(adminToken) && adminLogin.data.user?.role === 'ADMIN', {
-      status: adminLogin.status,
-      role: adminLogin.data.user?.role ?? null,
+    adminToken = managementLogin.data.token;
+    const adminUserId = Number(managementLogin.data.user?.id);
+    record('Management login returns ADMIN session', managementLogin.status === 200 && Boolean(adminToken) && managementLogin.data.user?.role === 'ADMIN', {
+      status: managementLogin.status,
+      role: managementLogin.data.user?.role ?? null,
       sessionReturned: Boolean(adminToken),
     });
     if (!adminToken) throw new WorkflowStopError('admin_login_failed');

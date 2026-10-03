@@ -217,12 +217,12 @@ async function cleanupFixtures() {
 async function run() {
   let stage = 'management_login';
   try {
-    const adminLogin = await request('/auth/admin/login', {
+    const managementLogin = await request('/auth/management/login', {
       method: 'POST',
-      body: { email: process.env.SEED_ADMIN_EMAIL, password: process.env.SEED_ADMIN_PASSWORD },
+      body: { email: process.env.VERIFY_ADMIN_EMAIL, password: process.env.VERIFY_ADMIN_PASSWORD },
     });
-    adminToken = adminLogin.data.token;
-    record('Management login', adminLogin.status === 200 && adminLogin.data.user?.role === 'ADMIN', { status: adminLogin.status });
+    adminToken = managementLogin.data.token;
+    record('Management login', managementLogin.status === 200 && managementLogin.data.user?.role === 'ADMIN', { status: managementLogin.status });
     if (!adminToken) throw new TestStopError('admin_login_failed');
 
     db = await mysql.createConnection({ host: process.env.DB_HOST, port: Number(process.env.DB_PORT), user: process.env.DB_USER, password: process.env.DB_PASSWORD, database: process.env.DB_NAME });
