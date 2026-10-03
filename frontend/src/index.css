@@ -1,0 +1,66 @@
+@import 'tailwindcss';
+
+:root {
+  --color-primary: #fc6c26;
+  --color-primary-strong: #e75a12;
+  --color-background: #fff4d6;
+  --color-vanilla: #fff9ee;
+  --color-green: #063b2d;
+  --color-text: #17201c;
+  --color-card: #fffbf2;
+  --color-border: #e8dcc5;
+  --color-muted: #6b6258;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--color-text);
+  background: var(--color-background);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--color-background);
+  color: var(--color-text);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+
