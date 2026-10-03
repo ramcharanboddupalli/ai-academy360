@@ -9,7 +9,7 @@ export function ProtectedRoute({ role, children }: { role: AuthRole; children?: 
 
   if (isLoading) return null;
   if (!user) {
-    return <Navigate to={role === 'ADMIN' ? '/login/admin' : '/login/student'} replace state={{ from: location.pathname }} />;
+    return <Navigate to={role === 'ADMIN' ? '/management/login' : '/login/student'} replace state={{ from: location.pathname }} />;
   }
   if (user.role !== role) {
     return <Navigate to={user.role === 'ADMIN' ? '/admin/dashboard' : '/student/dashboard'} replace />;

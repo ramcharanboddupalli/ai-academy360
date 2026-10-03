@@ -42,7 +42,7 @@ export function HomePage() {
             </div>
             <h3 className="text-xl font-semibold text-[var(--color-text)]">Management Login</h3>
             <p className="mt-2 text-sm text-[var(--color-muted)]">Manage students, courses, payments, complaints and academy operations.</p>
-            <Link to="/login/admin" className="mt-5 block">
+            <Link to="/management/login" className="mt-5 block">
               <Button variant="primary" className="w-full">Management Login</Button>
             </Link>
           </Card>

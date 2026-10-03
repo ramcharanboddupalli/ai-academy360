@@ -5,7 +5,7 @@ import { PublicLayout } from './layouts/PublicLayout';
 import { StudentLayout } from './layouts/StudentLayout';
 import { AdminLayout } from './layouts/AdminLayout';
 import { HomePage } from './pages/HomePage';
-import { AdminLoginPage, LoginPage, StudentLoginPage } from './pages/auth/LoginPage';
+import { ManagementLoginPage, LoginPage, StudentLoginPage } from './pages/auth/LoginPage';
 import { StudentDashboardPage } from './pages/student/DashboardPage';
 import { StudentLearningPage } from './pages/student/LearningPage';
 import { StudentCoursesPage } from './pages/student/CoursesPage';
@@ -30,6 +30,7 @@ import { AdminAcademyManagementPage } from './pages/admin/AcademyManagementPage'
 import { NotificationsPage } from './pages/NotificationsPage';
 import { PerformanceAdvisorPage } from './pages/student/PerformanceAdvisorPage';
 import { AdminAICopilotPage } from './pages/admin/AICopilotPage';
+import { ManagementSignupPage } from './pages/auth/ManagementSignupPage';
 
 function App() {
   return (
@@ -39,7 +40,8 @@ function App() {
         <Route element={<PublicLayout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/login/admin" element={<AdminLoginPage />} />
+          <Route path="/management/login" element={<ManagementLoginPage />} />
+          <Route path="/management/signup" element={<ManagementSignupPage />} />
           <Route path="/login/student" element={<StudentLoginPage />} />
         </Route>
 

@@ -1,13 +1,14 @@
 import { ArrowRight, BrainCircuit, Users, BriefcaseBusiness } from 'lucide-react';
-import axios from 'axios';
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Input } from '../../components/Input';
+import { PasswordInput } from '../../components/PasswordInput';
 import { useAuth } from '../../contexts/AuthContext';
+import { authErrorMessage } from './authErrorMessage';
 
-function AuthShell({
+export function AuthShell({
   title,
   description,
   accent,
@@ -65,11 +66,16 @@ export function LoginPage() {
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-background)] text-[var(--color-primary)]">
               <BriefcaseBusiness className="h-5 w-5" />
             </div>
-            <h2 className="text-2xl font-bold text-[var(--color-text)]">Management Login</h2>
+            <h2 className="text-2xl font-bold text-[var(--color-text)]">Management</h2>
             <p className="mt-3 text-sm text-[var(--color-muted)]">Manage students, courses, payments, complaints and academy operations.</p>
-            <Link to="/login/admin" className="mt-5 block">
-              <Button variant="primary" size="lg" className="w-full">Management Login</Button>
-            </Link>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <Link to="/management/login">
+                <Button variant="primary" size="lg" className="w-full">Management Login</Button>
+              </Link>
+              <Link to="/management/signup">
+                <Button variant="secondary" size="lg" className="w-full">Management Sign Up</Button>
+              </Link>
+            </div>
           </Card>
 
           <Card className="p-6">
@@ -88,10 +94,12 @@ export function LoginPage() {
   );
 }
 
-export function AdminLoginPage() {
+export function ManagementLoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, isLoading } = useAuth();
   const [errorMessage, setErrorMessage] = useState('');
+  const notice = (location.state as { notice?: string } | null)?.notice;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -101,9 +109,7 @@ export function AdminLoginPage() {
       await login({ role: 'ADMIN', email: String(formData.get('email') ?? ''), password: String(formData.get('password') ?? '') });
       navigate('/admin/dashboard', { replace: true });
     } catch (error) {
-      setErrorMessage(axios.isAxiosError(error) && error.response?.status === 401
-        ? 'Invalid email or password.'
-        : 'Unable to sign in right now. Check your connection and try again.');
+      setErrorMessage(authErrorMessage(error, 'management-login'));
     }
   };
 
@@ -120,18 +126,21 @@ export function AdminLoginPage() {
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-5">
         <Input label="Email" name="email" type="email" placeholder="manager@academy360.edu" autoComplete="username" required />
-        <Input label="Password" name="password" type="password" placeholder="Enter your password" autoComplete="current-password" required />
+        <PasswordInput label="Password" name="password" placeholder="Enter your password" autoComplete="current-password" required />
 
+        {notice ? <p role="status" className="rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-3 text-sm text-[var(--color-green)]">{notice}</p> : null}
         {errorMessage ? <p role="alert" className="rounded-xl border border-[var(--color-primary)]/30 bg-[var(--color-background)] p-3 text-sm text-[var(--color-text)]">{errorMessage}</p> : null}
 
         <Button type="submit" variant="primary" size="lg" className="w-full" loading={isLoading}>
           Sign In to Management <ArrowRight className="h-4 w-4" />
         </Button>
 
-        <Link to="/login" className="block text-center text-sm font-medium text-[var(--color-primary)]">
-          Back to Login Options
-        </Link>
+        <Link to="/login" className="block text-center text-sm font-medium text-[var(--color-primary)]">Back to Login Options</Link>
       </form>
+      <p className="mt-5 text-center text-sm text-[var(--color-muted)]">
+        Don&apos;t have a management account?{' '}
+        <Link to="/management/signup" className="font-semibold text-[var(--color-primary)] underline underline-offset-2">Sign up</Link>
+      </p>
     </AuthShell>
   );
 }
@@ -149,9 +158,7 @@ export function StudentLoginPage() {
       await login({ role: 'STUDENT', studentId: String(formData.get('studentId') ?? '').trim().toUpperCase(), password: String(formData.get('password') ?? '') });
       navigate('/student/dashboard', { replace: true });
     } catch (error) {
-      setErrorMessage(axios.isAxiosError(error) && error.response?.status === 401
-        ? 'Invalid Student ID or password.'
-        : 'Unable to sign in right now. Check your connection and try again.');
+      setErrorMessage(authErrorMessage(error, 'student-login'));
     }
   };
 
@@ -168,7 +175,7 @@ export function StudentLoginPage() {
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-5">
         <Input label="Student ID" name="studentId" type="text" placeholder="ACA26ST001" autoComplete="username" autoCapitalize="characters" required />
-        <Input label="Password" name="password" type="password" placeholder="Enter your password" autoComplete="current-password" required />
+        <PasswordInput label="Password" name="password" placeholder="Enter your password" autoComplete="current-password" required />
 
         {errorMessage ? <p role="alert" className="rounded-xl border border-[var(--color-primary)]/30 bg-[var(--color-background)] p-3 text-sm text-[var(--color-text)]">{errorMessage}</p> : null}
 
